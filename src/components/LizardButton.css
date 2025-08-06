@@ -1,0 +1,27 @@
+.lizard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lizard-button {
+  padding: 2rem 3rem;
+  font-size: 2rem;
+  border: none;
+  border-radius: 15px;
+  background: linear-gradient(45deg, #00ffcc, #0066ff);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+  transition: transform 0.1s;
+}
+
+.lizard-button:hover {
+  transform: scale(1.05);
+}
+
+.click-count {
+  color: #fff;
+  font-size: 1.2rem;
+}
