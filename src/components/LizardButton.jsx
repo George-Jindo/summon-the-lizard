@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import './LizardButton.css';
 
 const soundList = [
-  '/sounds/lizard1.mp3',
-  '/sounds/lizard2.mp3',
-  '/sounds/lizard3.mp3'
+  '/sounds/lizard1.mp3'
 ];
 
 function LizardButton() {
