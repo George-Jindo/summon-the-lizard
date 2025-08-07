@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import './LizardButton.css';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const LOCAL_STORAGE_KEY = 'lizard_local_clicks';
 const soundPaths = ['/sounds/lizard1.mp3'];
@@ -8,17 +9,20 @@ const soundPaths = ['/sounds/lizard1.mp3'];
 function LizardButton() {
   const [localClicks, setLocalClicks] = useState(0);
   const [globalClicks, setGlobalClicks] = useState(0);
+  const [milestoneMessage, setMilestoneMessage] = useState('');
+  const [showMilestone, setShowMilestone] = useState(false);
+  const [shakeIntensity, setShakeIntensity] = useState(0);
+  const [emojiExplosions, setEmojiExplosions] = useState([]);
 
-  // Fetch global clicks on load
   useEffect(() => {
-  fetchGlobalClicks();
-
-  // Load local clicks from localStorage
-  const storedClicks = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (storedClicks) {
-    setLocalClicks(parseInt(storedClicks, 10));
-  }
-}, []);
+    fetchGlobalClicks();
+    const storedClicks = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (storedClicks) {
+      const count = parseInt(storedClicks, 10);
+      setLocalClicks(count);
+      setMilestoneMessage(getMilestoneMessage(count));
+    }
+  }, []);
 
   const fetchGlobalClicks = async () => {
     const { data, error } = await supabase
@@ -33,38 +37,138 @@ function LizardButton() {
     }
   };
 
-  const handleClick = async () => {
-  setLocalClicks(prev => {
-    const newCount = prev + 1;
-    localStorage.setItem(LOCAL_STORAGE_KEY, newCount);
-    return newCount;
-  });
+  const getMilestoneMessage = (clicks) => {
+    if (clicks >= 1000) return 'You have become the Lizard.';
+    if (clicks >= 500) return 'You are now Lizard Royalty. 👑';
+    if (clicks >= 250) return 'Are your fingers okay?';
+    if (clicks >= 100) return 'Seek help.';
+    if (clicks >= 50) return "Okay chill. It's just a lizard.";
+    if (clicks >= 10) return "You're getting warmed up...";
+    return '';
+  };
 
-    // Play the lizard sound
+  const handleClick = async () => {
+    setLocalClicks(prev => {
+      const newCount = prev + 1;
+      localStorage.setItem(LOCAL_STORAGE_KEY, newCount);
+
+      const message = getMilestoneMessage(newCount);
+      if (message !== milestoneMessage) {
+        setMilestoneMessage(message);
+        setShowMilestone(true);
+        setTimeout(() => setShowMilestone(false), 2500);
+      }
+
+      // Increase shake intensity
+      setShakeIntensity(Math.min(newCount * 0.2, 20));
+
+      // Trigger emoji explosion
+      triggerEmojiExplosion();
+
+      return newCount;
+    });
+
     const sound = new Audio(soundPaths[0]);
     sound.play().catch(err => console.error('Audio playback failed:', err));
 
-    // Call the RPC to increment the DB counter
     const { data, error } = await supabase.rpc('increment_clicks');
-
     if (error) {
       console.error('Error incrementing global clicks:', error);
     } else {
-      setGlobalClicks(data); // The function returns the new value
+      setGlobalClicks(data);
     }
   };
 
+  const triggerEmojiExplosion = () => {
+  const emojis = ['🦎', '🦎', '🦎', '🦎', '🦎'];
+  const explosion = emojis.map((emoji, i) => {
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = 200 + Math.random() * 200; // explode 200–400px out
+    return {
+      id: Date.now() + i,
+      emoji,
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance
+    };
+  });
+
+  setEmojiExplosions(prev => [...prev, ...explosion]);
+
+  setTimeout(() => {
+    setEmojiExplosions(prev => prev.slice(emojis.length));
+  }, 1000);
+};
+
+
   return (
-    <div className="lizard-container">
-      <button className="lizard-button" onClick={handleClick}>
-        Summon the Lizard 🦎
-      </button>
+    <motion.div
+  animate={{
+    x: [0, -1, 1, -1, 1, 0],
+    y: [0, 1, -1, 1, -1, 0]
+  }}
+  transition={{
+    duration: 0.3,
+    repeat: shakeIntensity,
+    repeatType: 'loop'
+  }}
+  className="lizard-container"
+>
+    <div className="button-explosion-wrapper">
+  <div className="circle-button-container">
+    <svg className="circle-text-static" viewBox="0 0 200 200">
+      <defs>
+        <path
+          id="circlePath"
+          d="M100,100 m-75,0 a75,75 0 1,1 150,0 a75,75 0 1,1 -150,0"
+        />
+      </defs>
+      <text fill="white" fontSize="12" fontWeight="bold" letterSpacing="2">
+        <textPath href="#circlePath" startOffset="50%" textAnchor="middle">
+          SUMMON THE LIZARD
+        </textPath>
+      </text>
+    </svg>
+
+    <div className="circle-button-wrapper" onClick={handleClick}>
+      <div className="lizard-emoji">🦎</div>
+    </div>
+  </div>
+
+
+
       <p className="click-count">Your clicks: {localClicks}</p>
       <p className="click-count">Global Lizard Summons: {globalClicks}</p>
+    <div className="milestone-wrapper">
+      <AnimatePresence>
+        {showMilestone && (
+          <motion.p
+            className="milestone-message"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.5 }}
+          >
+            {milestoneMessage}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
+      {emojiExplosions.map(({ id, emoji, x, y }) => (
+        <motion.span
+          key={id}
+          className="emoji-explosion"
+          initial={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 }}
+          animate={{ x, y, opacity: 0, scale: 2, rotate: 360 }}
+          transition={{ duration: 1 }}
+          style={{ position: 'absolute', fontSize: '2rem' }}
+        >
+          {emoji}
+        </motion.span>
+      ))}
+      </div>
+    </motion.div>
   );
 }
 
 export default LizardButton;
-
 
