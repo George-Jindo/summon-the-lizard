@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import './LizardButton.css';
 
+const LOCAL_STORAGE_KEY = 'lizard_local_clicks';
 const soundPaths = ['/sounds/lizard1.mp3'];
 
 function LizardButton() {
@@ -10,8 +11,14 @@ function LizardButton() {
 
   // Fetch global clicks on load
   useEffect(() => {
-    fetchGlobalClicks();
-  }, []);
+  fetchGlobalClicks();
+
+  // Load local clicks from localStorage
+  const storedClicks = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (storedClicks) {
+    setLocalClicks(parseInt(storedClicks, 10));
+  }
+}, []);
 
   const fetchGlobalClicks = async () => {
     const { data, error } = await supabase
@@ -27,7 +34,11 @@ function LizardButton() {
   };
 
   const handleClick = async () => {
-    setLocalClicks(prev => prev + 1);
+  setLocalClicks(prev => {
+    const newCount = prev + 1;
+    localStorage.setItem(LOCAL_STORAGE_KEY, newCount);
+    return newCount;
+  });
 
     // Play the lizard sound
     const sound = new Audio(soundPaths[0]);
