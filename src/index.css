@@ -2,6 +2,7 @@ body {
   margin: 0;
   background-color: #0d0d0d;
   font-family: 'Segoe UI', sans-serif;
+  user-select: none;
 }
 
 .app {

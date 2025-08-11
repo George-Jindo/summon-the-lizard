@@ -113,19 +113,27 @@ function LizardButton() {
   }}
   className="lizard-container"
 >
-    <div className="button-explosion-wrapper">
+  <div className="button-explosion-wrapper">
   <div className="circle-button-container">
-    <svg className="circle-text-static" viewBox="0 0 200 200">
+    <svg className="circle-text-rotating" viewBox="0 0 200 200" style={{ overflow: 'visible' }}>
       <defs>
         <path
           id="circlePath"
-          d="M100,100 m-75,0 a75,75 0 1,1 150,0 a75,75 0 1,1 -150,0"
+          d="M100,100 m-90,0 a90,90 0 1,1 180,0 a90,90 0 1,1 -180,0"
         />
       </defs>
-      <text fill="white" fontSize="12" fontWeight="bold" letterSpacing="2">
+      <text fill="white" fontSize="14" fontWeight="bold" letterSpacing="2">
         <textPath href="#circlePath" startOffset="50%" textAnchor="middle">
           SUMMON THE LIZARD
         </textPath>
+        <animateTransform
+          attributeName="transform"
+          type="rotate"
+          from="0 100 100"
+          to="360 100 100"
+          dur="8s"
+          repeatCount="indefinite"
+        />
       </text>
     </svg>
 
