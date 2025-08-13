@@ -5,6 +5,42 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const LOCAL_STORAGE_KEY = 'lizard_local_clicks';
 const soundPaths = ['/sounds/lizard1.mp3'];
+const goldenSoundPath = '/sounds/golden_lizard.mp3'; // make sure this exists
+
+// tiny inline SVG lizard, gold gradient + glow-ready
+function GoldenLizardSVG({ size = 28 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="golden-lizard-svg"
+    >
+      <defs>
+        <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FFE066"/>
+          <stop offset="50%" stopColor="#FFC107"/>
+          <stop offset="100%" stopColor="#FF8F00"/>
+        </linearGradient>
+        <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <path
+        d="M29 10c3-2 7-2 8 1 1 2 0 4-2 6l3 3c2-1 4 0 5 2 1 2 0 4-1 5l5 5c2-1 4-1 5 1 1 2 0 4-2 6l-4 3c-2 2-5 2-7 0l-2-2-2 2c-2 2-5 2-7 0l-4-4c-2-2-2-5 0-7l2-2-3-3c-2 2-4 3-6 2-2-1-3-4-1-6l4-4c2-2 5-2 7 0l2 2 2-2c-2-2-2-5 0-6Z"
+        fill="url(#goldGrad)"
+        filter="url(#goldGlow)"
+      />
+      <circle cx="36" cy="14" r="2" fill="#FFF8E1" />
+    </svg>
+  );
+}
 
 function LizardButton() {
   const [localClicks, setLocalClicks] = useState(0);
@@ -12,10 +48,16 @@ function LizardButton() {
   const [milestoneMessage, setMilestoneMessage] = useState('');
   const [showMilestone, setShowMilestone] = useState(false);
   const [shakeIntensity, setShakeIntensity] = useState(0);
+
+  // NEW: flash state for golden event
+  const [goldenFlash, setGoldenFlash] = useState(false);
+
+  // explosions now support two particle types:
+  // { id, kind: 'emoji' | 'gold', emoji?: string, x, y }
   const [emojiExplosions, setEmojiExplosions] = useState([]);
 
   useEffect(() => {
-    document.body.style.userSelect = 'none'; // Prevent text highlighting
+    document.body.style.userSelect = 'none';
     fetchGlobalClicks();
 
     const storedClicks = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -24,9 +66,8 @@ function LizardButton() {
       setLocalClicks(count);
       setMilestoneMessage(getMilestoneMessage(count));
     }
-
     return () => {
-      document.body.style.userSelect = ''; // Restore default on cleanup
+      document.body.style.userSelect = '';
     };
   }, []);
 
@@ -54,6 +95,15 @@ function LizardButton() {
   };
 
   const handleClick = async () => {
+    // 1% golden event
+    const isGoldenEvent = Math.random() < 0.01;
+
+    // toggle the flash right away if rare
+    if (isGoldenEvent) {
+      setGoldenFlash(true);
+      setTimeout(() => setGoldenFlash(false), 450);
+    }
+
     setLocalClicks(prev => {
       const newCount = prev + 1;
       localStorage.setItem(LOCAL_STORAGE_KEY, newCount);
@@ -66,13 +116,19 @@ function LizardButton() {
       }
 
       setShakeIntensity(Math.min(newCount * 0.2, 20));
-      triggerEmojiExplosion();
+      if (isGoldenEvent) {
+        triggerGoldenLizardExplosion();
+      } else {
+        triggerEmojiExplosion();
+      }
       return newCount;
     });
 
-    const sound = new Audio(soundPaths[0]);
+    // play sound
+    const sound = new Audio(isGoldenEvent ? goldenSoundPath : soundPaths[0]);
     sound.play().catch(err => console.error('Audio playback failed:', err));
 
+    // increment global
     const { data, error } = await supabase.rpc('increment_clicks');
     if (error) {
       console.error('Error incrementing global clicks:', error);
@@ -82,13 +138,14 @@ function LizardButton() {
   };
 
   const triggerEmojiExplosion = () => {
-    const emojis = ['🦎', '🦎', '🦎', '🦎', '🦎'];
-    const explosion = emojis.map((emoji, i) => {
+    const count = 5;
+    const explosion = Array.from({ length: count }).map((_, i) => {
       const angle = Math.random() * 2 * Math.PI;
-      const distance = 200 + Math.random() * 200;
+      const distance = 200 + Math.random() * 200; // 200–400px
       return {
         id: Date.now() + i,
-        emoji,
+        kind: 'emoji',
+        emoji: '🦎',
         x: Math.cos(angle) * distance,
         y: Math.sin(angle) * distance
       };
@@ -96,8 +153,27 @@ function LizardButton() {
 
     setEmojiExplosions(prev => [...prev, ...explosion]);
     setTimeout(() => {
-      setEmojiExplosions(prev => prev.slice(emojis.length));
+      setEmojiExplosions(prev => prev.slice(count));
     }, 1000);
+  };
+
+  const triggerGoldenLizardExplosion = () => {
+    const count = 9;
+    const explosion = Array.from({ length: count }).map((_, i) => {
+      const angle = Math.random() * 2 * Math.PI;
+      const distance = 250 + Math.random() * 250; // 250–500px
+      return {
+        id: Date.now() + i,
+        kind: 'gold',
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance
+      };
+    });
+
+    setEmojiExplosions(prev => [...prev, ...explosion]);
+    setTimeout(() => {
+      setEmojiExplosions(prev => prev.slice(count));
+    }, 1500);
   };
 
   return (
@@ -134,7 +210,10 @@ function LizardButton() {
             </text>
           </svg>
 
-          <div className="circle-button-wrapper" onClick={handleClick}>
+          <div
+            className={`circle-button-wrapper ${goldenFlash ? 'golden-flash' : ''}`}
+            onClick={handleClick}
+          >
             <div className="lizard-emoji">🦎</div>
           </div>
         </div>
@@ -142,7 +221,6 @@ function LizardButton() {
         <p className="click-count">Your clicks: {localClicks}</p>
         <p className="click-count">Global Lizard Summons: {globalClicks}</p>
 
-        {/* Milestone fixed position */}
         <div className="milestone-wrapper">
           <AnimatePresence>
             {showMilestone && (
@@ -153,7 +231,7 @@ function LizardButton() {
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.5 }}
                 style={{
-                  
+                  position: 'fixed',
                   top: '20%',
                   left: '50%',
                   transform: 'translateX(-50%)',
@@ -166,16 +244,16 @@ function LizardButton() {
           </AnimatePresence>
         </div>
 
-        {emojiExplosions.map(({ id, emoji, x, y }) => (
+        {emojiExplosions.map(({ id, kind, emoji, x, y }) => (
           <motion.span
             key={id}
-            className="emoji-explosion"
+            className={`explosion-particle ${kind === 'gold' ? 'gold' : ''}`}
             initial={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 }}
-            animate={{ x, y, opacity: 0, scale: 2, rotate: 360 }}
-            transition={{ duration: 1 }}
-            style={{ position: 'absolute', fontSize: '2rem', pointerEvents: 'none' }}
+            animate={{ x, y, opacity: 0, scale: kind === 'gold' ? 2.2 : 2, rotate: 360 }}
+            transition={{ duration: kind === 'gold' ? 1.4 : 1 }}
+            style={{ position: 'absolute', pointerEvents: 'none' }}
           >
-            {emoji}
+            {kind === 'gold' ? <GoldenLizardSVG size={32} /> : <span style={{ fontSize: '2rem' }}>{emoji}</span>}
           </motion.span>
         ))}
       </div>
